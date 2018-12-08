@@ -31,7 +31,7 @@ $pdo = new PDO($dsn, $user, $pass, $opt);
 print date('Y-m-d H:i:s')."\n";
 
 
-$photoDir = '/mnt/d/Local/photo/process';
+$photoDir = '/mnt/d/Local/photo/gtest';
 
 $files = scandir($photoDir);
 
@@ -58,13 +58,11 @@ function process_file($file) {
     $f = array();
     $f['filename'] = basename($file);
 
-    if (!exists($f)) {
-        $f = array_merge($f,get_iptc_data($file),recognise ($file));
-        save($f);
-    }
+    $f = array_merge($f,recognise ($file));
 
     print "$file\n";
-    //var_dump($f);
+    var_dump($f);
+    print "===============================================================================\n";
 
     return 0;
 }
@@ -75,6 +73,10 @@ function goolge_label_filter($word) {
         'dog like mammal',
         'dog breed group',
         'american pit bull terrier',
+        'pit bull terrier',
+        'pit bull',
+        'american bulldog',
+        'bulldog',
         'carnivoran',
         'boston terrier',
         'tree',
@@ -102,7 +104,7 @@ function recognise($fileName) {
     $labels = $response->getLabelAnnotations();
 
     if ($labels) {
-        //echo("Labels:" . PHP_EOL);
+        echo("Labels:" . PHP_EOL);
         foreach ($labels as $label) {
             if (goolge_label_filter($label->getDescription()))
                 $r['labels'][] = $label->getDescription();
@@ -113,10 +115,32 @@ function recognise($fileName) {
     $locations = $response->getLandmarkAnnotations();
 
     if ($locations) {
-        //echo("Labels:" . PHP_EOL);
+        echo("Locs:" . PHP_EOL);
         foreach ($locations as $label) {
             //echo($label->getDescription() . PHP_EOL);
             $r['locations'][] = $label->getDescription();
+        }
+    }
+
+    $response = $imageAnnotator->textDetection($image);
+    $texts = $response->getTextAnnotations();
+
+    if ($texts) {
+        echo("Texts:" . PHP_EOL);
+        foreach ($texts as $label) {
+            //echo($label->getDescription() . PHP_EOL);
+            $r['texts'][] = $label->getDescription();
+        }
+    }
+
+    $response = $imageAnnotator->logoDetection($image);
+    $texts = $response->getLogoAnnotations();
+
+    if ($texts) {
+        echo("Logos:" . PHP_EOL);
+        foreach ($texts as $label) {
+            //echo($label->getDescription() . PHP_EOL);
+            $r['logos'][] = $label->getDescription();
         }
     }
 
@@ -143,6 +167,8 @@ function get_iptc_data( $image_path ) {
 }
 
 function exists($f) {
+    return 0;
+    /*
     global $pdo, $_DB_PREFIX_;
 
     $st = $pdo->prepare("select id from {$_DB_PREFIX_}photo where filename=:f");
@@ -150,10 +176,14 @@ function exists($f) {
     $id = $st->fetchColumn(0);
 
     return $id ? 1 : 0;
+    */
 }
 
 function save($f) {
     global $pdo, $_DB_PREFIX_;
+
+    return 1;
+    /*
 
     $st = $pdo->prepare("insert into {$_DB_PREFIX_}photo (filename,taken_at,title,subject,tags,g_labels,g_locations,width,height) ".
                             " values (:f,:a,:t,:s,:tags,:lb,:lc,:w,:h)");
@@ -188,6 +218,7 @@ function save($f) {
         'w'=>$f['width'],
         'h'=>$f['height'],
     ]);
+    */
 
     return 1;    
 }

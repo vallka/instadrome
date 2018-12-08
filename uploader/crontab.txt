@@ -1,0 +1,10 @@
+#crontab
+
+4  * * * * php /mnt/d/Users/Valentine/Documents/GitHub/instadrome/uploader/uploadPhoto.php >> /mnt/d/Local/photo/instagram/logs/upload.log.txt
+34 * * * * php /mnt/d/Users/Valentine/Documents/GitHub/instadrome/uploader/load.php >> /mnt/d/Local/photo/instagram/logs/load.log.txt
+0  3 * * * php /mnt/d/Users/Valentine/Documents/GitHub/instadrome/uploader/repostPhoto.php >> /mnt/d/Local/photo/instagram/logs/repost.log.txt
+36 * * * * /mnt/d/Users/Valentine/Documents/GitHub/instadrome/uploader/phplike.sh >> /mnt/d/Local/photo/instagram/logs/like.log.txt
+
+
+
+
