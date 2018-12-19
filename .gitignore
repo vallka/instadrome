@@ -18,4 +18,9 @@ Homestead.json
 /.vagrant
 gvision/config/parameters.php
 gvision/cred/googlecr.json
-*/cred/googlecr.json
+*/config/
+*/cred/
+*.jpg
+*.tif
+/faces/
+*.txt
