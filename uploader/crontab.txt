@@ -1,11 +1,9 @@
 #crontab
 
-4  8,9,10,11,12,13,17,18,19,20 * * * php /mnt/d/Users/Valentine/Documents/GitHub/instadrome/uploader/uploadPhoto.php >> /mnt/d/Local/photo/instagram/logs/upload.log.txt
-34 */4 * * * php /mnt/d/Users/Valentine/Documents/GitHub/instadrome/uploader/load.php >> /mnt/d/Local/photo/instagram/logs/load.log.txt
+4  * * * * php /mnt/d/Users/Valentine/Documents/GitHub/instadrome/uploader/uploadPhoto.php >> /mnt/d/Local/photo/instagram/logs/upload.log.txt
+34 * * * * php /mnt/d/Users/Valentine/Documents/GitHub/instadrome/uploader/load.php >> /mnt/d/Local/photo/instagram/logs/load.log.txt
 0  3 * * * php /mnt/d/Users/Valentine/Documents/GitHub/instadrome/uploader/repostPhoto.php >> /mnt/d/Local/photo/instagram/logs/repost.log.txt
-36 12,13,14,15,16,17,20,21,22,23 * * * php /mnt/d/Users/Valentine/Documents/GitHub/instadrome/uploader/like.php >> /mnt/d/Local/photo/instagram/logs/like.log.txt
-16  8,9,10,11,12,13,17,18,19,20,21,22 * * * php /mnt/d/Users/Valentine/Documents/GitHub/instadrome/gellifique/like.php >> /mnt/d/Local/photo/instagram/logs/gel-like.log.txt
-21  22,23,0,1,2,3,4,5,6,7,14,15 * * * php /mnt/d/Users/Valentine/Documents/GitHub/instadrome/gellifique/like2.php >> /mnt/d/Local/photo/instagram/logs/gelcolor-like.log.txt
+36 * * * * /mnt/d/Users/Valentine/Documents/GitHub/instadrome/uploader/phplike.sh >> /mnt/d/Local/photo/instagram/logs/like.log.txt
 
 
 

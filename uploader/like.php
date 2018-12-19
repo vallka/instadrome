@@ -2,7 +2,7 @@
 
 # imports the Google Cloud client library
 require __DIR__ . '/vendor/autoload.php';
-//use Google\Cloud\Vision\V1\ImageAnnotatorClient;
+use Google\Cloud\Vision\V1\ImageAnnotatorClient;
 
 
 set_time_limit(0);
@@ -107,36 +107,21 @@ function process_tag($tag,$items,$ig)
             $like_count = $item->getLikeCount();
             $user = $item->getUser()->getUsername();
 
-            sleep(rand(3,10));
-            $iserinfo = $ig->people->getInfoByName($user);
-            $mc = $iserinfo->getUser()->getMediaCount();
-            $ferc = $iserinfo->getUser()->getFollowerCount();
-            $fingc = $iserinfo->getUser()->getFollowingCount();
-
             $timepassed = time()-$item->getTakenAt();
 
             $nofaces = recognise_no_faces($url);
 
-            if (
-                $like_count < 30 and 
-                $like_count > 10 and 
-                $timepassed > 600 and
-                $mc > 20 and
-                $ferc < 2000 and   
-                $fingc > ($ferc/2) and
-                $nofaces and
-                !exists($user)
-                ) 
-            {
-
-
-                printf("%d) %s [%d] [%s] [%s] [%d / %d / %d / %d]\n", 
+            if ($like_count<30 and $like_count>10 and $timepassed>600 and $nofaces and !exists($user)) {
+                printf("%d) %s [%d] - %s\n%s\n[%s] [%s] [%s] [%d]\n", 
                     $i++,
                     $taken_at,
                     $timepassed,
+                    $caption,
+                    $url,
+                    $id_image, 
                     $code,
                     $user,
-                    $like_count,$mc,$ferc,$fingc
+                    $like_count
                 );
                 /*
                 $userId = $ig->people->getUserIdForName($item->getUser()->getUsername());
@@ -183,9 +168,6 @@ function exists($u) {
 }
 
 function recognise_no_faces($fileName) {
-    return true;
-
-    /*
     # the name of the image file to annotate
 
     # instantiates a client
@@ -230,7 +212,6 @@ function recognise_no_faces($fileName) {
 
     
     return $no_faces;
-    */
 }
 
 function update_db(

@@ -25,55 +25,27 @@ print date('Y-m-d H:i:s')."\n";
 
 $photoDir = '/mnt/d/Local/photo/instagram';
 
+$files = scandir($photoDir);
+shuffle($files);
 
-$files = scandir_jpg_hash($photoDir);
-//shuffle($files);
-//var_dump($files);
-
-$file = $files[rand(0,count($files)-1)];
-//var_dump($file);
-
-$dname=dirname($file);
-$fname=basename($file);
-
-if ($dname and $dname!='.' and $dname[0]=='#') {
-    $tags = explode('#',$dname);
-    print ($fname .'!'. $dname);
-    array_shift($tags);
-    //var_dump($tags);
-}
-else {
-    $tags = [];
-    print ($fname);
-
-}
-$fullfilename = "$photoDir/$file";
-if (process_file($fullfilename,$tags)) {
-    rename($fullfilename,"$photoDir/done/$fname");
-    print "\n\nDone ".date('Y-m-d H:i:s')."\n";
-}
-print "\n";
-exit;
-
-///////////////////////////////////////
-
-function scandir_jpg_hash($dir, $prefix = '') {
-    $dir = rtrim($dir, '\\/');
-    $result = array();
-  
-      foreach (scandir($dir) as $f) {
-        if ($f !== '.' and $f !== '..') {
-          if (is_dir("$dir/$f") and $f[0]=='#') {
-            $result = array_merge($result, scandir_jpg_hash("$dir/$f", "$prefix$f/"));
-          } elseif (is_file("$dir/$f") and preg_match('/\.jpg$/i',$f)) {
-            $result[] = $prefix.$f;
-          }
+$done = 0;
+foreach($files as $file) {
+    $fullfilename = "$photoDir/$file";
+    if (is_file($fullfilename) and preg_match('/\.jpg$/i',$file)) {
+        if (process_file($fullfilename)) {
+            rename($fullfilename,"$photoDir/done/$file");
+            print "\n\nDone ".date('Y-m-d H:i:s')."\n";
+            $done++;
+            break;
         }
-      }
-  
-    return $result;
+
+    }
 }
 
+if (!$done) {
+    print "Nothing to do\n";
+
+}
 
 function find_g_tags($f) {
     global $pdo, $_DB_PREFIX_;
@@ -88,7 +60,7 @@ function find_g_tags($f) {
 }
 
 
-function process_file($file,$main_tags=null) {
+function process_file($file) {
     print "$file\n";
     //$exif = exif_read_data($file);
     //$caption = $exif['ImageDescription'];
@@ -107,13 +79,13 @@ function process_file($file,$main_tags=null) {
     if ($g_tags['tags']) 
         $iptc['tags'] = explode(',',$g_tags['tags']);
 
-    //var_dump($iptc);
+    var_dump($iptc);
     $g_labels = explode(',',$g_labels);
-    //var_dump($g_labels);
-    //var_dump($g_locations);
+    var_dump($g_labels);
+    var_dump($g_locations);
 
     foreach ($g_labels as $l) {
-        if (!in_array($l,$iptc['tags']) and substr_count($l,' ')<2) {
+        if (!in_array($l,$iptc['tags'])) {
             $iptc['tags'][] = $l;
         }
     }
@@ -127,12 +99,6 @@ function process_file($file,$main_tags=null) {
     if ($caption and $iptc['subject']) $caption .= ' ';
     if ($iptc['subject']) $caption .= trim($iptc['subject']);
 
-    if ($main_tags and is_array($main_tags)) {
-        foreach ($main_tags as $t) {
-            $t = preg_replace("/'/",'',$t);
-            if ($t) $caption .= " #".preg_replace('/\s/','',$t);   // no spaces for instagram
-        }
-    }
     if ($iptc['tags']) {
 
         if (count($iptc['tags']) > 9)
@@ -142,8 +108,7 @@ function process_file($file,$main_tags=null) {
 
         foreach ($rand_keys as $key) {
             $tag = trim($iptc['tags'][$key],' #');
-            $tag = preg_replace("/'/",'',$tag);
-            if ($tag) $caption .= " #".preg_replace('/\s/','',$tag);   // no spaces for instagram
+            $caption .= " #".preg_replace('/\s/','',$tag);   // no spaces for instagram
         }
     }
 
@@ -154,10 +119,10 @@ function process_file($file,$main_tags=null) {
 }
 
 function get_iptc_data( $image_path ) {
-    $return = array('title' => '', 'subject' => '', 'tags' => []);
+    $return = array('title' => '', 'subject' => '', 'tags' => '');
     $size = getimagesize ( $image_path, $info);
 
-    if(is_array($info) and isset($info["APP13"])) {
+    if(is_array($info)) {
         $iptc = iptcparse($info["APP13"]);
         //var_dump($iptc); // this will show all the data retrieved but I'm only concerned with a few 
         $return['title'] = isset($iptc['2#005']) ? $iptc['2#005'][0] : '';
