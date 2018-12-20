@@ -24,3 +24,8 @@ gvision/cred/googlecr.json
 *.tif
 /faces/
 *.txt
+*.zip
+sql/instalike-data.sql
+sql/instalike.sql
+uploader/dir.php
+uploader/phplike.sh

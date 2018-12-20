@@ -1,5 +1,7 @@
 <?php
 
+exit;
+
 # imports the Google Cloud client library
 require __DIR__ . '/vendor/autoload.php';
 //use Google\Cloud\Vision\V1\ImageAnnotatorClient;
