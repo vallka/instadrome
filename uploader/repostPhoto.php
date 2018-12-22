@@ -1,7 +1,7 @@
 <?php
 # imports the Google Cloud client library
 require __DIR__ . '/vendor/autoload.php';
-use Google\Cloud\Vision\V1\ImageAnnotatorClient;
+#use Google\Cloud\Vision\V1\ImageAnnotatorClient;
 
 set_time_limit(0);
 date_default_timezone_set('UTC');
@@ -33,12 +33,12 @@ $photos = get_photos();
 while ($photo=get_photo($photos)) {
     sleep(2);
     //$photo['url'] = preg_replace('/\?.*$/','',$photo['url']);
-    if (recognise_no_faces($photo['url'])) {
+    #if (recognise_no_faces($photo['url'])) {
         $newphoto = downloadPhoto($photo['url'],$photo['code']);
         rename($newphoto,$photoDir . basename($newphoto));
         print $photoDir . basename($newphoto) . "\nDone\n";
         break;
-    }
+    #}
 }
 
 /*

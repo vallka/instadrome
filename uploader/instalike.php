@@ -8,13 +8,17 @@ set_time_limit(0);
 date_default_timezone_set('UTC');
 
 
+$parno = isset($argv[1]) ? $argv[1] : '';
+
 $start_tm = time();
 
-print date('Y-m-d H:i:s')."\n";
+print date('Y-m-d H:i:s')." - par:$parno\n";
+
+
 
 
 $instalike = new Instalike();
-$instalike->run();
+$instalike->run($parno);
 
 
 $end_tm = time();
@@ -26,8 +30,8 @@ class Instalike {
     protected $parameters;
     protected $pdo;
 
-    function run() {
-        $this->readPars();
+    function run($parno) {
+        $this->readPars($parno);
         $this->do_a_feed();
     }
 
@@ -63,8 +67,8 @@ class Instalike {
         sleep($secs);
     }
 
-    function readPars() {
-        $parametersFilepath = 'config/parameters.php';
+    function readPars($parno) {
+        $parametersFilepath = "config/parameters{$parno}.php";
         $parameters = require($parametersFilepath);
 
         $this->parameters = $parameters['parameters'];
