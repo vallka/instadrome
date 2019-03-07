@@ -30,8 +30,14 @@ $files = scandir_jpg_hash($photoDir);
 //shuffle($files);
 //var_dump($files);
 
+if (!$files) {
+    print "Nothing to do!\n";
+    exit;
+}
+
 $file = $files[rand(0,count($files)-1)];
 //var_dump($file);
+
 
 $dname=dirname($file);
 $fname=basename($file);
@@ -74,7 +80,7 @@ function scandir_jpg_hash($dir, $prefix = '') {
     return $result;
 }
 
-
+/*
 function find_g_tags($f) {
     global $pdo, $_DB_PREFIX_;
 
@@ -86,14 +92,19 @@ function find_g_tags($f) {
 
     return $row;
 }
+*/
 
 
 function process_file($file,$main_tags=null) {
+    $MAX_TAGS = 25;
     print "$file\n";
-    //$exif = exif_read_data($file);
+    $exif = exif_read_data($file);
+    //var_dump($exif);
     //$caption = $exif['ImageDescription'];
     
     $iptc = get_iptc_data($file);
+    //var_dump($iptc);
+    /*
     $g_tags = find_g_tags($file);
     $g_labels = $g_tags['g_labels'];
     $g_locations = $g_tags['g_locations'];
@@ -107,19 +118,23 @@ function process_file($file,$main_tags=null) {
     if ($g_tags['tags']) 
         $iptc['tags'] = explode(',',$g_tags['tags']);
 
-    //var_dump($iptc);
-    $g_labels = explode(',',$g_labels);
+    //$g_labels = explode(',',$g_labels);
     //var_dump($g_labels);
     //var_dump($g_locations);
-
     foreach ($g_labels as $l) {
         if (!in_array($l,$iptc['tags']) and substr_count($l,' ')<2) {
             $iptc['tags'][] = $l;
         }
     }
+    */
 
-    if (! $iptc['title'] and $g_locations) {
-        $iptc['title'] = $g_locations;
+    if (! $iptc['title'] and $iptc['location']) {
+        $iptc['title'] = $iptc['location'];
+        $iptc['location'] = null;
+    }
+    if (! $iptc['subject'] and $iptc['location'] and ($iptc['title']!=$iptc['location']))  {
+        $iptc['subject'] = $iptc['location'];
+        $iptc['location'] = null;
     }
 
     $caption = trim($iptc['title']);
@@ -127,34 +142,104 @@ function process_file($file,$main_tags=null) {
     if ($caption and $iptc['subject']) $caption .= ' ';
     if ($iptc['subject']) $caption .= trim($iptc['subject']);
 
-    if ($main_tags and is_array($main_tags)) {
-        foreach ($main_tags as $t) {
-            $t = preg_replace("/'/",'',$t);
-            if ($t) $caption .= " #".preg_replace('/\s/','',$t);   // no spaces for instagram
-        }
+
+    if (! $iptc['tags']) {
+        //$iptc['tags'] = array_merge($iptc['tags'],get_imagga_tags($file,10));
+        $iptc['tags'] = get_imagga_tags($file,30);
     }
+
     if ($iptc['tags']) {
 
-        if (count($iptc['tags']) > 9)
-            $rand_keys = array_rand($iptc['tags'], 9);
+        var_dump($iptc['tags']);
+        if (!is_array($iptc['tags'])) {
+            $kw = explode(',',$iptc['tags']);
+            $kw = array_map('trim',$kw);
+            $iptc['tags'] = $kw;
+            var_dump($iptc['tags']);
+        }
+        elseif (count($iptc['tags'])==1 and strpos($iptc['tags'][0],',')!==false) {
+            $kw = explode(',',$iptc['tags'][0]);
+            $kw = array_map('trim',$kw);
+            $iptc['tags'] = $kw;
+            var_dump($iptc['tags']);
+        }
+
+        if (count($iptc['tags']) > $MAX_TAGS)
+            $rand_keys = array_rand($iptc['tags'], $MAX_TAGS);
         else     
             $rand_keys = array_keys($iptc['tags']);
 
         foreach ($rand_keys as $key) {
             $tag = trim($iptc['tags'][$key],' #');
+
             $tag = preg_replace("/'/",'',$tag);
+            $tag = preg_replace("/\-/",'',$tag);
             if ($tag) $caption .= " #".preg_replace('/\s/','',$tag);   // no spaces for instagram
+
         }
     }
 
+    if ($main_tags and is_array($main_tags)) {
+        foreach ($main_tags as $t) {
+            if (!in_array($t,$iptc['tags'])) {
+                $t = preg_replace("/'/",'',$t);
+                if ($t) $caption .= " #".preg_replace('/\s/','',$t);   // no spaces for instagram
+            }
+        }
+    }
+
+    $caption = trim($caption);
+
+
+    if (isset($exif['GPSLatitudeRef'])) {
+        removeGPS($file);
+    }
 
     print ">>$caption\n\n";
     //return false;
-    return uoloadPhoto($file,$caption);
+    return uploadPhoto($file,$caption);
+}
+
+function removeGPS($file) {
+    $exiftools = '/usr/local/bin/exiftool';
+
+    print ("put_exiftool_data: $file\n");
+
+    $args = '-overwrite_original ';
+    $args .="-GPSLatitude= -GPSLongitude= -GPSAltitude= -GPSVersion= -GPSLatitudeRef= -GPSLongitudeRef= -GPSAltitudeRef= ";
+
+    print("exiftool: " . "$exiftools $args \"$file\"\n");
+    $res = `$exiftools $args "$file"`;
+    print("exiftool: $res\n");
 }
 
 function get_iptc_data( $image_path ) {
-    $return = array('title' => '', 'subject' => '', 'tags' => []);
+    /*
+    $iptcHeaderArray = array
+    (
+        '2#005'=>'DocumentTitle',
+        '2#010'=>'Urgency',
+        '2#015'=>'Category',
+        '2#020'=>'Subcategories',
+        '2#040'=>'SpecialInstructions',
+        '2#055'=>'CreationDate',
+        '2#080'=>'AuthorByline',
+        '2#085'=>'AuthorTitle',
+        '2#090'=>'City',
+        '2#095'=>'State',
+        '2#101'=>'Country',
+        '2#103'=>'OTR',
+        '2#105'=>'Headline',
+        '2#110'=>'Source',
+        '2#115'=>'PhotoSource',
+        '2#116'=>'Copyright',
+        '2#120'=>'Caption',
+        '2#122'=>'CaptionWriter'
+    );
+    */
+
+
+    $return = array('title' => '', 'subject' => '', 'tags' => [], 'location'=>'');
     $size = getimagesize ( $image_path, $info);
 
     if(is_array($info) and isset($info["APP13"])) {
@@ -163,17 +248,71 @@ function get_iptc_data( $image_path ) {
         $return['title'] = isset($iptc['2#005']) ? $iptc['2#005'][0] : '';
         $return['subject'] = isset($iptc['2#120']) ? $iptc['2#120'][0] : '';
         $return['tags'] = isset($iptc['2#025']) ? $iptc['2#025'] : [];
+
+        $return['location'] = isset($iptc['2#090'])? $iptc['2#090'][0] : '';
+        if (isset($iptc['2#095'])) {
+            $return['location'] = $return['location'] ? ("{$return['location']}, ") : '';
+            $return['location'] .= $iptc['2#095'][0];
+        }
+        if (isset($iptc['2#101'])) {
+            $return['location'] = $return['location'] ? ("{$return['location']}, ") : '';
+            $return['location'] .= $iptc['2#101'][0];
+        }
+
     }
     return $return;
 }
 
-function uoloadPhoto($photoFilename,$captionText) {
+function get_imagga_tags($file,$count) {
+
+
+    $api_credentials = array(
+        'key' => 'acc_198112daf8098f8',
+        'secret' => '932bdff581b7c8186f345ba5830b5ed0'
+    );
+
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, "https://api.imagga.com/v2/tags");
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+    curl_setopt($ch, CURLOPT_USERPWD, $api_credentials['key'].':'.$api_credentials['secret']);
+    curl_setopt($ch, CURLOPT_HEADER, FALSE);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    $fields = [
+        'image' => new \CurlFile($file, 'image/jpeg', 'image.jpg'),
+        'limit' => $count
+    ];
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    $json_response = json_decode($response);
+    //var_dump($json_response);
+
+    $tags = [];
+    foreach ($json_response->result->tags as $tag) {
+        $tags[] = $tag->tag->en;
+        //print $tag->tag->en."\n";
+    }
+    return $tags;
+}
+
+
+function uploadPhoto($photoFilename,$captionText) {
     //return false;
 
     require __DIR__.'/vendor/autoload.php';
     /////// CONFIG ///////
     $username = 'val2ka';
     $password = 'll440Hym&ig';
+
+    //$username = 'gellifiquegel';
+    //$password = 'Marusya1';
+
     $debug = false;
     $truncatedDebug = true;
     //////////////////////
@@ -185,7 +324,7 @@ function uoloadPhoto($photoFilename,$captionText) {
     try {
         $ig->login($username, $password);
     } catch (\Exception $e) {
-        echo 'Something went wrong: '.$e->getMessage()."\n";
+        echo 'Something went wrong one: '.$e->getMessage()."\n";
         exit(0);
     }
     try {
@@ -201,6 +340,8 @@ function uoloadPhoto($photoFilename,$captionText) {
         //
         // Also note that it has lots of options, so read its class documentation!
         $photo = new \InstagramAPI\Media\Photo\InstagramPhoto($photoFilename);
+
+        print "uploading... ($captionText):\n";
         $r = $ig->timeline->uploadPhoto($photo->getFile(), ['caption' => $captionText]);
 
 
@@ -216,7 +357,7 @@ function uoloadPhoto($photoFilename,$captionText) {
         }
 
     } catch (\Exception $e) {
-        echo 'Something went wrong: '.$e->getMessage()."\n";
+        echo 'Something went wrong two: '.$e->getMessage()."\n";
         exit(0);
     }
 

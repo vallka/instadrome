@@ -28,7 +28,7 @@ $pdo = new PDO($dsn, $user, $pass, $opt);
 print date('Y-m-d H:i:s')."\n";
 $photoDir = '/mnt/d/Local/photo/process/';
 
-$photos = get_photos();
+$photos = get_photos(12);
 
 while ($photo=get_photo($photos)) {
     sleep(2);
@@ -37,6 +37,7 @@ while ($photo=get_photo($photos)) {
         $newphoto = downloadPhoto($photo['url'],$photo['code']);
         rename($newphoto,$photoDir . basename($newphoto));
         print $photoDir . basename($newphoto) . "\nDone\n";
+        update_db(null,'?',$photo['code']);
         break;
     #}
 }

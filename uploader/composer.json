@@ -1,6 +1,7 @@
 {
     "require": {
         "mgp25/instagram-php": "^5.0",
-        "google/cloud-vision": "^0.19.0"
+        "google/cloud-vision": "^0.19.0",
+        "seregazhuk/pinterest-bot": "^5.9"
     }
 }

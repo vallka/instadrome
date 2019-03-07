@@ -1,5 +1,6 @@
 <?php
 
+
 require __DIR__ . '/vendor/autoload.php';
 //use Google\Cloud\Vision\V1\ImageAnnotatorClient;
 \InstagramAPI\Instagram::$allowDangerousWebUsageAtMyOwnRisk = true;
@@ -8,7 +9,7 @@ set_time_limit(0);
 date_default_timezone_set('UTC');
 
 
-$parno = isset($argv[1]) ? $argv[1] : '';
+$parno = isset($argv[1]) ? $argv[1] : '0';
 
 $start_tm = time();
 
@@ -29,6 +30,8 @@ print "***************************\n".date('Y-m-d H:i:s')." - " .($end_tm-$start
 class Instalike {
     protected $parameters;
     protected $pdo;
+    //protected $comments = ['📷','💯','👍','👌','✌','🙌','👏','💪','🔝','🆒',];
+    protected $comments = ['📷','💯','👍','👌','🙌','👏','💪','🔝','🆒',];
 
     function run($parno) {
         $this->readPars($parno);
@@ -89,6 +92,12 @@ function do_a_feed() {
     $password = $this->parameters['instagram_password'];
     $tags = $this->parameters['instagram_tags'];
 
+    if (count($tags)>5) {
+        shuffle($tags);
+        $tags = array_slice($tags,0,5);
+    }
+    //var_dump($tags);
+    //exit;
 
 
     $ig = new \InstagramAPI\Instagram($debug, $truncatedDebug);
@@ -98,6 +107,29 @@ function do_a_feed() {
         echo 'Something went wrong: '.$e->getMessage()."\n";
         exit(0);
     }
+
+    
+    $folls = $this->get_followers($this->parameters['instagram_max_to_unfollow']);
+    //var_dump($folls);
+
+    foreach($folls as $foll) {
+        print "Unfollowing {$foll['username']}/{$foll['userid']} \n";
+
+        //$iserinfo = $ig->people->getInfoById($foll['userid']);
+        //$iserinfo->printJson();
+
+        try {
+            $ig->people->unfollow($foll['userid']);
+        } catch (\Exception $e) {
+            echo 'Something went wrong: '.$e->getMessage()."\n";
+            //exit(0);
+        }
+        $this->update_db_unfollow($foll['userid']);
+    
+        $this->sleep();
+    }
+
+
     try {
         // Generate a random rank token.
         $rankToken = \InstagramAPI\Signatures::generateUUID(); 
@@ -113,9 +145,6 @@ function do_a_feed() {
                 $item_tags[$item->getCode()] = $tag;
             }
 
-            /*foreach ($items as $item) {
-                $all_items[] = [$tag => $item];
-            }*/
 
             $all_items = array_merge($all_items,$items);
 
@@ -129,10 +158,9 @@ function do_a_feed() {
 
         $this->process_items($item_tags,$all_items,$ig);
 
-
     } catch (\Exception $e) {
         echo 'Something went wrong: '.$e->getMessage()."\n";
-        exit(0);
+        //exit(0);
     }
 }
 
@@ -222,6 +250,7 @@ function do_a_feed() {
 
             $like = $total <= $this->parameters['instagram_max_to_like'];
             $follow = $total <= $this->parameters['instagram_max_to_follow'];
+            $comment = $total <= $this->parameters['instagram_max_to_comment'];
                         
             if ($like or $follow) {
                 printf("%d) %s %d s. %s %s U:%s(%s) L:%d\n", 
@@ -238,6 +267,12 @@ function do_a_feed() {
                 if ($like) {
                     $ig->media->like($id_image);
                     print "Liked.";
+                }
+
+                if ($comment) {
+                    $comt = $this->comments[rand(0,count($this->comments)-1)];
+                    $ig->media->comment($id_image,$comt);
+                    print "Commented:$comt.";
                 }
 
                 if ($follow) {
@@ -276,10 +311,25 @@ function do_a_feed() {
 
         }
 
-        $total--;
+        //$total--;
         print "\n\n$total processed\n\n";
         return true;
     }
+
+    function get_followers($num) {
+        $this->connect_db();
+
+        $_DB_PREFIX_ = $this->parameters['database_prefix'];
+        $_DB_SUFFIX_ = $this->parameters['database_suffix'];
+
+        $st = $this->pdo->prepare("select * from {$_DB_PREFIX_}instalike{$_DB_SUFFIX_} where followed=1 and userid is not null and DATE_ADD(created_dt, INTERVAL 2 week) < now() order by id limit 0,$num");
+        $st->execute();
+        $res = $st->fetchAll(PDO::FETCH_ASSOC);
+
+        return $res;
+    }
+
+
 
     function exists($u,$uid,$code) {
         $this->connect_db();
@@ -342,11 +392,35 @@ function do_a_feed() {
             'mc'=>$media_count,
             'fer'=>$follower_count, 
             'fing'=>$following_count, 
-            'bu'=>$is_busines, 
+            'bu'=>$is_busines ? 1:0, 
             'e'=>$email, 
             'fulln'=>$fullname, 
-            'liked'=>$like, 
-            'followed'=>$follow, 
+            'liked'=>$like ? 1:0, 
+            'followed'=>$follow ? 1:0, 
+            'now'=>$now, 
+            ];
+
+
+
+
+        $st->execute($a);
+
+    }
+
+    function update_db_unfollow($userid) 
+    {
+        $this->connect_db();
+
+        $_DB_PREFIX_ = $this->parameters['database_prefix'];
+        $_DB_SUFFIX_ = $this->parameters['database_suffix'];
+
+        $st = $this->pdo->prepare("update {$_DB_PREFIX_}instalike{$_DB_SUFFIX_} set followed=-1,updated_dt=:now where userid=:userid");
+        
+        $now = date('Y-m-d H:i:s');
+
+        $a = 
+            [
+            'userid'=>$userid,
             'now'=>$now, 
             ];
 
