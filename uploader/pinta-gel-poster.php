@@ -137,12 +137,16 @@ EOD;
             foreach ($igs as $ig) {
                 print "IG:{$ig['code']}:{$ig['products']}\n";
 
-                $url = "https://www.instagram.com/p/{$ig['code']}/";
                 if ($ig['products']) {
                     $products = array_filter(explode(',',$ig['products']));
                     if ($products[0]) {
                         $url = "https://www.gellifique.co.uk/index.php?controller=product&id_product={$products[0]}";
                     }
+                }
+                else {
+                    $url = $ig['username']=='gellifique_gel_colour' ?
+                    "https://www.gellifique.co.uk/" :
+                    "https://www.instagram.com/p/{$ig['code']}/";
                 }
                 
 

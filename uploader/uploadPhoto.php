@@ -84,7 +84,8 @@ class Uploader {
         $im_tags = null;
         print "$file\n";
         $exif = exif_read_data($file);
-        //var_dump($exif);
+        var_dump($exif);
+        $this->removeGPS($file,$exif);
         //$caption = $exif['ImageDescription'];
         
         $iptc = $this->get_iptc_data($file);
@@ -115,7 +116,7 @@ class Uploader {
                 $kw = explode(',',$iptc['tags']);
                 $kw = array_map('trim',$kw);
                 $iptc['tags'] = $kw;
-                var_dump($iptc['tags']);
+                //var_dump($iptc['tags']);
             }
             elseif (count($iptc['tags'])==1 and strpos($iptc['tags'][0],',')!==false) {
                 $kw = explode(',',$iptc['tags'][0]);
@@ -148,12 +149,8 @@ class Uploader {
             }
         }
     
+    
         $caption = trim($caption);
-    
-        if (isset($exif['GPSLatitudeRef'])) {
-            $this->removeGPS($file);
-        }
-    
         print ">>$caption\n\n";
         //return false;
         $icode = $this->uploadPhoto($file,$caption);
@@ -231,19 +228,31 @@ class Uploader {
         return $result;
     }
 
-    function removeGPS($file) {
-        $exiftools = '/usr/bin/exiftool';
-    
-        print ("put_exiftool_data: $file\n");
-    
-        $args = '-overwrite_original ';
-        //$args .="-GPSLatitude= -GPSLongitude= -GPSAltitude= -GPSVersion=  -GPSLatitudeRef= -GPSLongitudeRef= -GPSAltitudeRef= ";
-        $args .="-GPSLatitude= -GPSLongitude= -GPSAltitude= -GPSLatitudeRef= -GPSLongitudeRef= -GPSAltitudeRef= ";
-        $args .="-GPSVersion= -GPSVersionID= -GPSTimeStamp= -GPSDateStamp= -GPSMapDatum= ";
-    
-        print("exiftool: " . "$exiftools $args \"$file\"\n");
-        $res = `$exiftools $args "$file"`;
-        print("exiftool: $res\n");
+    function removeGPS($file,$exif) {
+        if (array_key_exists('GPSVersion',$exif) or
+            array_key_exists('GPSVersionID',$exif) or
+            array_key_exists('GPSLatitudeRef',$exif) or
+            array_key_exists('GPSLongitudeRef',$exif) or
+            array_key_exists('GPSAltitudeRef',$exif) or
+            array_key_exists('GPSTimeStamp',$exif) or
+            array_key_exists('GPSDateStamp',$exif) or
+            array_key_exists('GPSMapDatum',$exif)
+         ) 
+        {
+            //$exiftools = '/usr/bin/exiftool';
+            $exiftools = 'exiftool';
+        
+            print ("put_exiftool_data: $file\n");
+        
+            $args = '-overwrite_original ';
+            //$args .="-GPSLatitude= -GPSLongitude= -GPSAltitude= -GPSVersion=  -GPSLatitudeRef= -GPSLongitudeRef= -GPSAltitudeRef= ";
+            $args .="-GPSLatitude= -GPSLongitude= -GPSAltitude= -GPSLatitudeRef= -GPSLongitudeRef= -GPSAltitudeRef= ";
+            $args .="-GPSVersion= -GPSVersionID= -GPSTimeStamp= -GPSDateStamp= -GPSMapDatum= ";
+        
+            print("exiftool: " . "$exiftools $args \"$file\"\n");
+            $res = `$exiftools $args "$file"`;
+            print("exiftool: $res\n");
+        }
     }
 
     function get_imagga_tags($file,$count) {
